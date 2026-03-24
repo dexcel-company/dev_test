@@ -1,0 +1,57 @@
+name: CodeRevisor Trigger
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - "release/**"
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+      - "release/**"
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate webhook secret
+        env:
+          CODEREVISOR_WEBHOOK_URL: ${{ secrets.CODEREVISOR_WEBHOOK_URL }}
+        run: |
+          if [ -z "$CODEREVISOR_WEBHOOK_URL" ]; then
+            echo "CODEREVISOR_WEBHOOK_URL secret is not set"
+            exit 1
+          fi
+
+      - name: Trigger CodeRevisor worker
+        env:
+          CODEREVISOR_WEBHOOK_URL: ${{ secrets.CODEREVISOR_WEBHOOK_URL }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          BRANCH="${HEAD_REF:-$REF_NAME}"
+          PR="${PR_NUMBER:-}"
+          WEBHOOK_URL="${CODEREVISOR_WEBHOOK_URL%/}/trigger"
+
+          echo "Triggering ${WEBHOOK_URL}"
+          echo "repo=${REPO}"
+          echo "branch=${BRANCH}"
+          echo "event=${EVENT_NAME}"
+          echo "pr=${PR}"
+
+          curl --fail --show-error --silent \
+            -X POST \
+            "${WEBHOOK_URL}?repo=${REPO}&branch=${BRANCH}&commit=${SHA}&pr=${PR}&event=${EVENT_NAME}"
