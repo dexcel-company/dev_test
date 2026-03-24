@@ -54,4 +54,7 @@ jobs:
 
           curl --fail --show-error --silent \
             -X POST \
-            "${WEBHOOK_URL}?repo=${REPO}&branch=${BRANCH}&commit=${SHA}&pr=${PR}&event=${EVENT_NAME}"
+            -H "Content-Type: application/json" \
+            -d "$(printf '{"repo":"%s","branch":"%s","commit":"%s","pr":"%s","event":"%s"}' \
+              "$REPO" "$BRANCH" "$SHA" "$PR" "$EVENT_NAME")" \
+            "${WEBHOOK_URL}"
